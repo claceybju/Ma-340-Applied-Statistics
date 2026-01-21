@@ -1,0 +1,164 @@
+---
+title: "Tables & Filters"
+subtitle: "Ma 340 Applied Statistics"
+author: "Charles Lacey"
+format: 
+  html:
+    html-table-processing: none
+    toc: true
+    toc-depth: 3
+  # revealjs:
+  #   width: 1600
+  #   height: 900
+  #   transition: fade
+  #   scrollable: true
+  #   code-overflow: wrap
+  #   html-table-processing: none
+execute:
+  echo: true       # show code by default
+  warning: false   # keep slides tidy
+  message: false
+---
+
+# Frequency Tables
+- Number of times each category was observed. 
+- Relative freq = observed / sample size. 
+
+## Base R
+```{r table, include=T}
+df = read.csv("WeatherConditions.csv")
+table(df$Conditions)
+```
+
+## Visual Tables
+```{r}
+library(kableExtra)
+
+tableData = table(df$Conditions)
+tableData
+kable(tableData)
+```
+
+### Building the Table
+Cheatsheets: <https://posit.co/resources/cheatsheets/>
+Textbook: <https://r4ds.hadley.nz/>
+```{r}
+library(dplyr)
+library(kableExtra)
+
+tab = df %>%
+  count(Condition = Conditions, name = "Frequency") |>
+  arrange(desc(Frequency)) |>
+  mutate(`Relative Frequency` = Frequency / sum(Frequency))
+
+kable(tab) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover"))
+
+```
+### Cumulative Frequency  
+```{r}
+
+library(dplyr)
+library(kableExtra)
+library(scales)
+
+# Suppose you have a data frame `df` with a categorical column `Conditions`
+# df = read.csv("WeatherConditions.csv")
+
+# Frequency table using dplyr::count
+tab = df |>
+  count(Condition = Conditions, name = "Frequency") |>
+  arrange(desc(Frequency)) |>
+  mutate(
+    `Relative Frequency` = Frequency / sum(Frequency),
+    `Cumulative Frequency` = cumsum(Frequency),
+    `Cumulative Relative` = cumsum(`Relative Frequency`)
+  )
+
+# Render with percentages and styling
+tab |>
+  mutate(
+    `Relative Frequency` = percent(`Relative Frequency`, accuracy = 0.1),
+    `Cumulative Relative` = percent(`Cumulative Relative`, accuracy = 0.1)) |>
+  kable() |>  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover"))
+```
+
+## Graph Categorical Data
+Plotly: <https://plotly.com/r/bar-charts/>
+```{r}
+library(plotly)
+tableData = table(df$Conditions)
+
+plot_ly(x = rownames(tableData), y = tableData, type = 'bar') %>% 
+  layout(title = "January & Febraury Weather",
+         xaxis = list(title = "Weather Condition"),
+         yaxis = list(title = "Frequency"))
+```
+Pie Charts: <https://plotly.com/r/pie-charts/>
+```{r}
+plot_ly(labels = rownames(tableData), values = tableData, type = 'pie')
+```
+
+## Empirical Probability   
+
+<br><br>
+
+$$ \Large P(\text{event}) = \frac{\text{Number of times the event occurs}}{\text{Total number of trials}} $$ 
+
+<br><br>
+
+- How do you define an "event"?
+
+# Cross Tables  
+## Basic Table  
+```{r}
+xt = table(df$Condition, df$FeelsLike)
+xt
+```
+## Add Totals  
+```{r}
+xt_df = as.data.frame.matrix(xt)
+xt_df$Total = rowSums(xt_df)
+xt_df = rbind(xt_df,  colSums(xt_df))
+xt_df = cbind(rownames(xt_df), xt_df)
+rownames(xt_df) = NULL
+colnames(xt_df)[1] = "Condition"
+xt_df$Condition[6] = "Total"
+xt_df
+```
+## Print Table  
+```{r}
+kable(xt_df) |>
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover")) |>
+  row_spec(nrow(xt_df), bold = TRUE) |>
+  column_spec(ncol(xt_df), bold = T)
+```
+## Row & Column Percentage
+```{r}
+proportions(xt, margin = 1)
+proportions(xt, margin = 2)
+```
+
+
+
+# Select Cases  
+```{r}
+subset = which(df$FeelsLike == "Cold")
+# Number of COld Days
+length(subset)
+```
+```{r}
+df_cold = df[subset, ]
+head(df_cold)
+```
+## Cases with Multiple Criteria
+```{r}
+subset = which(df$FeelsLike == "Cold" & df$Conditions == "Sunny")
+length(subset)
+```
+```{r}
+head(df[subset, ])
+```
+
+
+
